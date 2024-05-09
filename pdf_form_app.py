@@ -4,12 +4,21 @@ import os
 import subprocess
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QWidget, QLineEdit,
                              QCheckBox, QLabel, QScrollArea, QComboBox, QPushButton, QFileDialog)
+from datetime import datetime
 import fitz
 
 class PdfFormApp(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.template_folder = "templates"  # Specify the folder path where the templates are located
+        if getattr(sys, 'frozen', False):
+            # If the script is running as an executable
+            executable_path = sys.executable
+            executable_dir = os.path.dirname(executable_path)
+            self.template_folder = os.path.join(executable_dir, "templates")
+        else:
+            # If the script is running as a Python script
+            self.template_folder = "templates"
+        
         self.pdf_library = self.load_templates()
         self.pdf_doc = None
         self.init_ui()
@@ -17,9 +26,10 @@ class PdfFormApp(QMainWindow):
 
     def load_templates(self):
         pdf_library = {}
-        for filename in os.listdir(self.template_folder):
-            if filename.endswith(".pdf"):
-                pdf_library[os.path.splitext(filename)[0]] = os.path.join(self.template_folder, filename)
+        if os.path.exists(self.template_folder):
+            for filename in os.listdir(self.template_folder):
+                if filename.endswith(".pdf"):
+                    pdf_library[os.path.splitext(filename)[0]] = os.path.join(self.template_folder, filename)
         return pdf_library
 
     def init_ui(self):
@@ -66,6 +76,8 @@ class PdfFormApp(QMainWindow):
         if self.pdf_library:
             default_template = next(iter(self.pdf_library.values()))
             self.open_pdf(default_template)
+        else:
+            print("No PDF templates found in the 'templates' folder.")
 
     def load_selected_pdf(self):
         selected_sheet = self.dropdown.currentText()
@@ -140,6 +152,20 @@ class PdfFormApp(QMainWindow):
 
         if output_path:
             self.update_form_fields()
+            timestamp = self.generate_timestamp()
+            page = self.pdf_doc[0]  # Access the first page
+            page.set_rotation(0)  # Ensure the page rotation is set to 0 before adding the timestamp
+            page_rect = page.rect
+            # Adjust the position: move left by reducing x-coordinate, adjust y-coordinate as needed
+            timestamp_pos = fitz.Point(page_rect.width - 180, page_rect.height - 20)  # Example adjustment
+            page.insert_text(
+                timestamp_pos,
+                timestamp,  # Updated to use the new timestamp format
+                fontsize=10,  # Reduced font size
+                fontname="Helvetica",
+                rotate=0,
+                color=(0, 0, 0)
+            )
             self.pdf_doc.save(output_path)
             print(f"PDF saved to {output_path}")
 
@@ -155,6 +181,19 @@ class PdfFormApp(QMainWindow):
         
         try:
             # Save the PDF to the temporary file
+            timestamp = self.generate_timestamp()
+            page = self.pdf_doc[0]  # Access the first page
+            page.set_rotation(0)  # Ensure the page rotation is set to 0 before adding the timestamp
+            page_rect = page.rect
+            timestamp_pos = fitz.Point(page_rect.width - 180, page_rect.height - 20)  # Adjusted position
+            page.insert_text(
+                timestamp_pos,
+                timestamp,  # Use the simplified timestamp format
+                fontsize=10,  # Adjusted font size
+                fontname="Helvetica",  # Adjust the font name as needed
+                rotate=0,  # Ensure the rotation is set to 0
+                color=(0, 0, 0)  # Set the color of the timestamp (black)
+            )
             self.pdf_doc.save(temp_path)
             
             # Path to Adobe Reader (update if necessary)
@@ -192,6 +231,19 @@ class PdfFormApp(QMainWindow):
         
         try:
             # Save the PDF to the temporary file
+            timestamp = self.generate_timestamp()
+            page = self.pdf_doc[0]  # Access the first page
+            page.set_rotation(0)  # Ensure the page rotation is set to 0 before adding the timestamp
+            page_rect = page.rect
+            timestamp_pos = fitz.Point(page_rect.width - 180, page_rect.height - 20)  # Adjusted position
+            page.insert_text(
+                timestamp_pos,
+                timestamp,  # Use the simplified timestamp format
+                fontsize=10,  # Adjusted font size
+                fontname="Helvetica",  # Adjust the font name as needed
+                rotate=0,  # Ensure the rotation is set to 0
+                color=(0, 0, 0)  # Set the color of the timestamp (black)
+            )
             self.pdf_doc.save(temp_path)
             
             # Path to Adobe Reader (update if necessary)
@@ -224,8 +276,14 @@ class PdfFormApp(QMainWindow):
                 field.update()
                 print(f"Updated {field.field_name} to {widget.currentText()}")
 
+    def generate_timestamp(self):
+        current_time = datetime.now()
+        timestamp = current_time.strftime("%B %d, %Y %I:%M %p")
+        return timestamp
+
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     ex = PdfFormApp()
     ex.show()
+    sys.exit(app.exec_())
     sys.exit(app.exec_())
