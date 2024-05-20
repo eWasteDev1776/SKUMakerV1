@@ -87,6 +87,11 @@ class PdfFormApp(QMainWindow):
     def open_pdf(self, file_path):
         try:
             self.pdf_doc = fitz.open(file_path)
+            if not self.pdf_doc or len(self.pdf_doc) == 0:
+                print("Error: No pages found in the PDF document.")
+                return
+            print(f"PDF loaded successfully: {file_path}")
+            print(f"Number of pages: {len(self.pdf_doc)}")
             self.load_form_fields(self.pdf_doc)
         except Exception as e:
             print(f"Error opening PDF: {e}")
@@ -152,20 +157,7 @@ class PdfFormApp(QMainWindow):
 
         if output_path:
             self.update_form_fields()
-            timestamp = self.generate_timestamp()
-            page = self.pdf_doc[0]  # Access the first page
-            page.set_rotation(0)  # Ensure the page rotation is set to 0 before adding the timestamp
-            page_rect = page.rect
-            # Adjust the position: move left by reducing x-coordinate, adjust y-coordinate as needed
-            timestamp_pos = fitz.Point(page_rect.width - 180, page_rect.height - 20)  # Example adjustment
-            page.insert_text(
-                timestamp_pos,
-                timestamp,  # Updated to use the new timestamp format
-                fontsize=10,  # Reduced font size
-                fontname="Helvetica",
-                rotate=0,
-                color=(0, 0, 0)
-            )
+            self.add_timestamp()
             self.pdf_doc.save(output_path)
             print(f"PDF saved to {output_path}")
 
@@ -181,19 +173,7 @@ class PdfFormApp(QMainWindow):
         
         try:
             # Save the PDF to the temporary file
-            timestamp = self.generate_timestamp()
-            page = self.pdf_doc[0]  # Access the first page
-            page.set_rotation(0)  # Ensure the page rotation is set to 0 before adding the timestamp
-            page_rect = page.rect
-            timestamp_pos = fitz.Point(page_rect.width - 180, page_rect.height - 20)  # Adjusted position
-            page.insert_text(
-                timestamp_pos,
-                timestamp,  # Use the simplified timestamp format
-                fontsize=10,  # Adjusted font size
-                fontname="Helvetica",  # Adjust the font name as needed
-                rotate=0,  # Ensure the rotation is set to 0
-                color=(0, 0, 0)  # Set the color of the timestamp (black)
-            )
+            self.add_timestamp()
             self.pdf_doc.save(temp_path)
             
             # Path to Adobe Reader (update if necessary)
@@ -231,19 +211,7 @@ class PdfFormApp(QMainWindow):
         
         try:
             # Save the PDF to the temporary file
-            timestamp = self.generate_timestamp()
-            page = self.pdf_doc[0]  # Access the first page
-            page.set_rotation(0)  # Ensure the page rotation is set to 0 before adding the timestamp
-            page_rect = page.rect
-            timestamp_pos = fitz.Point(page_rect.width - 180, page_rect.height - 20)  # Adjusted position
-            page.insert_text(
-                timestamp_pos,
-                timestamp,  # Use the simplified timestamp format
-                fontsize=10,  # Adjusted font size
-                fontname="Helvetica",  # Adjust the font name as needed
-                rotate=0,  # Ensure the rotation is set to 0
-                color=(0, 0, 0)  # Set the color of the timestamp (black)
-            )
+            self.add_timestamp()
             self.pdf_doc.save(temp_path)
             
             # Path to Adobe Reader (update if necessary)
@@ -281,9 +249,50 @@ class PdfFormApp(QMainWindow):
         timestamp = current_time.strftime("%B %d, %Y %I:%M %p")
         return timestamp
 
+    def add_timestamp(self):
+        timestamp = self.generate_timestamp()
+        if not self.pdf_doc or len(self.pdf_doc) == 0:
+            print("Error: No pages found in the PDF document.")
+            return
+
+        page = self.pdf_doc[0]  # Access the first page
+        page.set_rotation(0)  # Ensure the page rotation is set to 0 before adding the timestamp
+        page_rect = page.rect
+
+        # Debugging information
+        print(f"Page dimensions: {page_rect}")
+        print(f"Page width: {page_rect.width}, Page height: {page_rect.height}")
+        print(f"Is page rect infinite? {page_rect.is_infinite}")
+        print(f"Is page rect empty? {page_rect.is_empty}")
+
+        # Ensure the page dimensions are valid
+        if page_rect.is_infinite or page_rect.is_empty:
+            print("Error: Page dimensions are invalid.")
+            return
+
+        # Adjusted position to ensure it's within the page bounds
+        timestamp_pos = fitz.Point(page_rect.width - 180, page_rect.height - 25)
+
+        # Remove existing timestamp annotation if it exists
+        for annot in page.annots():
+            if annot.info.get("title") == "timestamp":
+                page.delete_annot(annot)
+
+        # Add new timestamp annotation
+        annot = page.add_freetext_annot(
+            rect=fitz.Rect(timestamp_pos, timestamp_pos + fitz.Point(100, 20)),  # Define a rectangle for the annotation
+            text=timestamp,
+            fontsize=10,
+            fontname="Helvetica",
+            rotate=0
+        )
+        annot.set_colors(stroke=(0, 0, 0), fill=None)
+        annot.set_info(title="timestamp")
+        annot.update()
+
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     ex = PdfFormApp()
     ex.show()
     sys.exit(app.exec_())
-    sys.exit(app.exec_())
+
