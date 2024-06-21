@@ -2,6 +2,7 @@ import sys
 import tempfile
 import os
 import subprocess
+import platform
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QWidget, QLineEdit,
                              QCheckBox, QLabel, QScrollArea, QComboBox, QPushButton, QFileDialog)
 from datetime import datetime
@@ -11,12 +12,10 @@ class PdfFormApp(QMainWindow):
     def __init__(self):
         super().__init__()
         if getattr(sys, 'frozen', False):
-            # If the script is running as an executable
             executable_path = sys.executable
             executable_dir = os.path.dirname(executable_path)
             self.template_folder = os.path.join(executable_dir, "templates")
         else:
-            # If the script is running as a Python script
             self.template_folder = "templates"
         
         self.pdf_library = self.load_templates()
@@ -41,13 +40,11 @@ class PdfFormApp(QMainWindow):
         widget.setLayout(layout)
         self.setCentralWidget(widget)
 
-        # Dropdown for sheet selection
         self.dropdown = QComboBox()
         self.dropdown.addItems(self.pdf_library.keys())
         self.dropdown.currentIndexChanged.connect(self.load_selected_pdf)
         layout.addWidget(self.dropdown)
 
-        # Buttons for save, print, and open in Adobe
         button_layout = QVBoxLayout()
         save_button = QPushButton("Save PDF")
         save_button.clicked.connect(self.save_pdf)
@@ -63,7 +60,6 @@ class PdfFormApp(QMainWindow):
 
         layout.addLayout(button_layout)
 
-        # Scroll area for form fields
         scroll_area = QScrollArea()
         scroll_widget = QWidget()
         self.form_layout = QVBoxLayout()
@@ -97,7 +93,6 @@ class PdfFormApp(QMainWindow):
             print(f"Error opening PDF: {e}")
 
     def load_form_fields(self, pdf):
-        # Clear previous layout
         while self.form_layout.count():
             child = self.form_layout.takeAt(0)
             if child.widget():
@@ -115,9 +110,9 @@ class PdfFormApp(QMainWindow):
 
             input_widget = None
             if field.field_type == 7:  # Text fields
-                if field.field_name in ["Item Title", "Notes"]:  # Multiline text fields
+                if field.field_name in ["Item Title", "Notes"]:
                     input_widget = QLineEdit()
-                    input_widget.setMinimumHeight(100)  # Set a larger height for multiline fields
+                    input_widget.setMinimumHeight(100)
                 else:
                     input_widget = QLineEdit()
                 input_widget.setText(field.field_value)
@@ -125,7 +120,7 @@ class PdfFormApp(QMainWindow):
             elif field.field_type == 2:  # Checkbox fields
                 input_widget = QCheckBox()
                 input_widget.setChecked(field.field_value.lower() in ["yes", "true", "on"])
-            elif field.field_name == "Condition":  # Condition field
+            elif field.field_name == "Condition":
                 input_widget = QComboBox()
                 input_widget.addItems(["New", "Used", "Parts & Repair"])
                 input_widget.setCurrentText(field.field_value)
@@ -167,36 +162,34 @@ class PdfFormApp(QMainWindow):
 
         self.update_form_fields()
         
-        # Create a temporary file for printing
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as temp_pdf:
             temp_path = temp_pdf.name
         
         try:
-            # Save the PDF to the temporary file
             self.add_timestamp()
             self.pdf_doc.save(temp_path)
             
-            # Path to Adobe Reader (update if necessary)
-            acrobat_path = r"C:\Program Files\Adobe\Acrobat DC\Acrobat\Acrobat.exe"
-            
-            if not os.path.exists(acrobat_path):
-                raise Exception("Adobe Reader not found at the specified path")
+            if platform.system() == "Darwin":
+                subprocess.run(["lp", temp_path], check=True)
+            else:
+                acrobat_path = r"C:\Program Files\Adobe\Acrobat DC\Acrobat\Acrobat.exe"
+                
+                if not os.path.exists(acrobat_path):
+                    raise Exception("Adobe Reader not found at the specified path")
 
-            # Print using Adobe Reader
-            try:
-                subprocess.run([acrobat_path, "/t", temp_path], check=True)
-                print("PDF sent to printer successfully")
-            except subprocess.CalledProcessError as e:
-                if e.returncode == 1:
-                    print("PDF sent to printer successfully (ignoring Adobe Reader's non-zero exit status)")
-                else:
-                    raise
+                try:
+                    subprocess.run([acrobat_path, "/t", temp_path], check=True)
+                    print("PDF sent to printer successfully")
+                except subprocess.CalledProcessError as e:
+                    if e.returncode == 1:
+                        print("PDF sent to printer successfully (ignoring Adobe Reader's non-zero exit status)")
+                    else:
+                        raise
         
         except Exception as e:
             print(f"An error occurred: {e}")
         
         finally:
-            # Delete the temporary file
             os.remove(temp_path)
 
     def open_in_adobe(self):
@@ -205,30 +198,29 @@ class PdfFormApp(QMainWindow):
 
         self.update_form_fields()
         
-        # Create a temporary file for opening in Adobe Reader
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as temp_pdf:
             temp_path = temp_pdf.name
         
         try:
-            # Save the PDF to the temporary file
             self.add_timestamp()
             self.pdf_doc.save(temp_path)
             
-            # Path to Adobe Reader (update if necessary)
-            acrobat_path = r"C:\Program Files\Adobe\Acrobat DC\Acrobat\Acrobat.exe"
-            
-            if not os.path.exists(acrobat_path):
-                raise Exception("Adobe Reader not found at the specified path")
+            if platform.system() == "Darwin":
+                subprocess.run(["open", temp_path], check=True)
+            else:
+                acrobat_path = r"C:\Program Files\Adobe\Acrobat DC\Acrobat\Acrobat.exe"
+                
+                if not os.path.exists(acrobat_path):
+                    raise Exception("Adobe Reader not found at the specified path")
 
-            # Open the PDF in Adobe Reader
-            subprocess.Popen([acrobat_path, temp_path])
-            print("PDF opened in Adobe Reader")
+                subprocess.Popen([acrobat_path, temp_path])
+                print("PDF opened in Adobe Reader")
         
         except Exception as e:
             print(f"An error occurred: {e}")
 
     def update_form_fields(self):
-        page = self.pdf_doc[0]  # Assuming the form fields are on the first page
+        page = self.pdf_doc[0]
         for field in page.widgets():
             widget = self.form_widgets.get(field.field_name)
             if isinstance(widget, QLineEdit):
@@ -255,32 +247,22 @@ class PdfFormApp(QMainWindow):
             print("Error: No pages found in the PDF document.")
             return
 
-        page = self.pdf_doc[0]  # Access the first page
-        page.set_rotation(0)  # Ensure the page rotation is set to 0 before adding the timestamp
+        page = self.pdf_doc[0]
+        page.set_rotation(0)
         page_rect = page.rect
 
-        # Debugging information
-        print(f"Page dimensions: {page_rect}")
-        print(f"Page width: {page_rect.width}, Page height: {page_rect.height}")
-        print(f"Is page rect infinite? {page_rect.is_infinite}")
-        print(f"Is page rect empty? {page_rect.is_empty}")
-
-        # Ensure the page dimensions are valid
         if page_rect.is_infinite or page_rect.is_empty:
             print("Error: Page dimensions are invalid.")
             return
 
-        # Adjusted position to ensure it's within the page bounds
         timestamp_pos = fitz.Point(page_rect.width - 180, page_rect.height - 25)
 
-        # Remove existing timestamp annotation if it exists
         for annot in page.annots():
             if annot.info.get("title") == "timestamp":
                 page.delete_annot(annot)
 
-        # Add new timestamp annotation
         annot = page.add_freetext_annot(
-            rect=fitz.Rect(timestamp_pos, timestamp_pos + fitz.Point(100, 20)),  # Define a rectangle for the annotation
+            rect=fitz.Rect(timestamp_pos, timestamp_pos + fitz.Point(100, 20)),
             text=timestamp,
             fontsize=10,
             fontname="Helvetica",
@@ -295,4 +277,3 @@ if __name__ == '__main__':
     ex = PdfFormApp()
     ex.show()
     sys.exit(app.exec_())
-
