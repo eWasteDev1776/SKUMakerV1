@@ -206,15 +206,28 @@ class PdfFormApp(QMainWindow):
             self.pdf_doc.save(temp_path)
             
             if platform.system() == "Darwin":
-                subprocess.run(["open", temp_path], check=True)
+                acrobat_path = "/Applications/Adobe Acrobat Reader DC.app/Contents/MacOS/AdobeReader"
+                
+                if os.path.exists(acrobat_path):
+                    try:
+                        subprocess.Popen([acrobat_path, temp_path])
+                        print("PDF opened in Adobe Reader")
+                    except Exception as e:
+                        print(f"Failed to open in Adobe Reader: {e}")
+                        subprocess.run(["open", temp_path], check=True)
+                        print("PDF opened in Preview")
+                else:
+                    print("Adobe Reader not found, opening in Preview")
+                    subprocess.run(["open", temp_path], check=True)
+                    print("PDF opened in Preview")
             else:
                 acrobat_path = r"C:\Program Files\Adobe\Acrobat DC\Acrobat\Acrobat.exe"
                 
-                if not os.path.exists(acrobat_path):
+                if os.path.exists(acrobat_path):
+                    subprocess.Popen([acrobat_path, temp_path])
+                    print("PDF opened in Adobe Reader")
+                else:
                     raise Exception("Adobe Reader not found at the specified path")
-
-                subprocess.Popen([acrobat_path, temp_path])
-                print("PDF opened in Adobe Reader")
         
         except Exception as e:
             print(f"An error occurred: {e}")
