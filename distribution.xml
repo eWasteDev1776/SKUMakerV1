@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<installer-gui-script minSpecVersion="1">
+    <title>SKUMaker Installer</title>
+    <background file="background.png" alignment="bottomleft" scaling="proportional"/>
+    <welcome file="welcome.html"/>
+    <license file="license.html"/>
+    <choices-outline>
+        <line choice="default">
+            <line choice="skumaker"/>
+        </line>
+    </choices-outline>
+    <choice id="default"/>
+    <choice id="skumaker" title="SKUMaker" description="Install SKUMaker">
+        <pkg-ref id="com.yourcompany.skumaker"/>
+    </choice>
+    <pkg-ref id="com.yourcompany.skumaker" version="1.0" auth="Root">#SKUMaker.pkg</pkg-ref>
+</installer-gui-script>
