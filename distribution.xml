@@ -1,17 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <installer-gui-script minSpecVersion="1">
-    <title>SKUMaker Installer</title>
-    <background file="background.png" alignment="bottomleft" scaling="proportional"/>
-    <welcome file="welcome.html"/>
-    <license file="license.html"/>
+    <title>SKU Maker</title>
+    <organization>CityeWaste</organization>
+    <domains enable_localSystem="true"/>
+    <options customize="never" require-scripts="false"/>
+    <volume-check>
+        <allowed-os-versions>
+            <os-version min="10.14"/>
+        </allowed-os-versions>
+    </volume-check>
+    <pkg-ref id="com.cityewaste.SKUMaker"/>
     <choices-outline>
         <line choice="default">
-            <line choice="skumaker"/>
+            <line choice="com.cityewaste.SKUMaker"/>
         </line>
     </choices-outline>
     <choice id="default"/>
-    <choice id="skumaker" title="SKUMaker" description="Install SKUMaker">
-        <pkg-ref id="com.yourcompany.skumaker"/>
+    <choice id="com.cityewaste.SKUMaker" visible="false">
+        <pkg-ref id="com.cityewaste.SKUMaker"/>
     </choice>
-    <pkg-ref id="com.yourcompany.skumaker" version="1.0" auth="Root">#SKUMaker.pkg</pkg-ref>
+    <pkg-ref id="com.cityewaste.SKUMaker" version="1.0" onConclusion="none">SKUMaker_component.pkg</pkg-ref>
 </installer-gui-script>
