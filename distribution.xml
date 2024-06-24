@@ -19,5 +19,5 @@
     <choice id="com.cityewaste.SKUMaker" visible="false">
         <pkg-ref id="com.cityewaste.SKUMaker"/>
     </choice>
-    <pkg-ref id="com.cityewaste.SKUMaker" version="1.0" onConclusion="none">SKUMaker_component.pkg</pkg-ref>
+    <pkg-ref id="com.cityewaste.SKUMaker" version="0.1.0" onConclusion="none">SKUMaker.pkg</pkg-ref>
 </installer-gui-script>
